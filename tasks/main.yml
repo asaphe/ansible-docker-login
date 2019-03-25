@@ -1,0 +1,47 @@
+---
+  - block:
+      - name: remove possible conflicting packages
+        pip:
+          name: docker-py
+          state: absent
+
+      - name: install prequesites
+        pip:
+          name: "{{ item.key }}"
+          version: "{{ item.value }}"
+          state: forcereinstall
+          extra_args: --no-dependencies
+        with_dict:
+          cryptography: '2.4.2'
+          awscli: '1.16.93'
+          docker: '3.7.0'
+
+      - name: get login for AWS ECR
+        no_log: true
+        shell: aws ecr get-login --no-include-email
+        environment:
+          AWS_ACCESS_KEY_ID: "{{aws_access_key_id}}"
+          AWS_SECRET_ACCESS_KEY: "{{aws_secret_access_key}}"
+          AWS_DEFAULT_REGION: "{{aws_region}}"
+        register: docker_ec2_login
+        when: amazon_ecr_login
+
+      - name: docker login AWS ECR
+        no_log: true
+        shell: "{{docker_ec2_login.stdout}}"
+        when: amazon_ecr_login
+
+      - name: docker login Docker Hub
+        docker_login:
+          username: "{{ docker_user.username }}"
+          password: "{{ docker_user.password }}"
+          email: "{{ docker_user.email }}"
+        with_items:
+          - "{{ docker_hub_credentials | flatten }}"
+        loop_control:
+          loop_var: docker_user
+        no_log: true
+        when: docker_user.username is search(docker_username) and docker_hub_login
+
+    become: true
+    tags: [docker.login]

@@ -1,0 +1,6 @@
+---
+docker_hub_login: true
+amazon_ecr_login: false
+aws_access_key_id:
+aws_secret_access_key:
+docker_username: tilixpull
